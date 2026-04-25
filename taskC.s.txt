@@ -1,0 +1,63 @@
+# task C
+.globl main
+main:
+    addi x2,  x0,  508        # SP = 508
+    addi x5,  x0,  768        # switch address  = 0x300
+    addi x6,  x0,  512        # LED address     = 0x200
+
+IDLE:
+    sw   x0,  0(x6)           # clear LEDs
+READ_INPUT:
+    lw   x10, 0(x5)           # read switches
+    beq  x10, x0, READ_INPUT  # wait until n != 0
+
+    # x10 = n, display fib(1), fib(2), ... fib(n)
+    add  x20, x10, x0         # x20 = n  (save)
+    addi x19, x0,  1          # x19 = i = 1
+
+SERIES_LOOP:
+    bge  x19, x20, SERIES_LAST   # if i > n, show fib(n) and halt... 
+    # actually show fib(i) when i <= n
+    add  x10, x19, x0         # x10 = i
+    jal  x1,  FIB             # x10 = fib(i)
+    sw   x10, 0(x6)           # display fib(i)
+
+    # delay loop
+    addi x18, x0,  0          # delay counter
+DELAY:
+    addi x18, x18, 1
+    addi x17, x0,  2000       # adjust this for visible delay
+    blt  x18, x17, DELAY
+
+    addi x19, x19, 1          # i++
+    beq  x0,  x0,  SERIES_LOOP
+
+SERIES_LAST:
+    add  x10, x19, x0
+    jal  x1, FIB
+    sw   x10, 0(x6)           # display fib(n), stays on
+
+END:
+    beq  x0, x0, IDLE         # go back to IDLE to accept new input
+
+# ── Recursive Fibonacci ──────────────────────────────
+FIB:
+    beq  x10, x0,  FIB_BASE   # n==0 → return 0
+    addi x11, x10, -1
+    beq  x11, x0,  FIB_BASE   # n==1 → return 1
+    addi x2,  x2,  -12
+    sw   x1,  8(x2)
+    sw   x10, 4(x2)
+    addi x10, x10, -1
+    jal  x1,  FIB             # fib(n-1)
+    sw   x10, 0(x2)
+    lw   x10, 4(x2)
+    addi x10, x10, -2
+    jal  x1,  FIB             # fib(n-2)
+    lw   x11, 0(x2)
+    add  x10, x10, x11
+    lw   x1,  8(x2)
+    addi x2,  x2,  12
+    jalr x0,  x1,  0
+FIB_BASE:
+    jalr x0,  x1,  0
